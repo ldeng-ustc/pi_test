@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-std=c++17 -g -Wall -pthread -O2 -fPIC -I..
-LDFLAGS= -lpthread -lrocksdb -lfmt -lxxhash
+LDFLAGS= -lpthread -lpidb -lrocksdb -lfmt -lxxhash
 
 OBJECTS=pi.o sketch.o
 EXEC=test

@@ -31,6 +31,7 @@ int main() {
     opt.sketch_width = 300;
     opt.sketch_height = 5;
     opt.index_threshold = 1;
+    opt.parser = new Parser(12);
     Pi pi("/tmp/db", opt);
 
     for(int i=0;i<N;i++) {

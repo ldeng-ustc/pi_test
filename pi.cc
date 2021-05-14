@@ -80,7 +80,10 @@ Pi::Pi(string path, PiOptions opt) {
             format("Can not find column family '{}'\n", kIndexColumnFamilyName));
     }
 
-    parser_ = new Parser;
+    parser_ = opt.parser;
+    if(parser_ == nullptr) {
+        throw Exception("no parser");
+    }
     sketch_ = new CountMinSketch(opt.sketch_height, opt.sketch_width);
     opt_ = opt;
 }
@@ -109,7 +112,6 @@ Status Pi::Get(const Slice& key, string *val) {
 Status Pi::Get2(const Slice& sk, vector<string> *vals) {
     sketch_->Add(sk);
     uint64_t read_count = sketch_->Estimate(sk);
-    cout << format("count: {}", read_count) << endl;
 
     Iterator *it = db_->NewIterator(ReadOptions(), index_);
     string val;
@@ -124,21 +126,28 @@ Status Pi::Get2(const Slice& sk, vector<string> *vals) {
         }
     } else {
         WriteBatch wb;
+        int val_count = 0;
         for (; it->Valid() && it->key().starts_with(sk); it->Next()) {
             Slice pk = it->key();
             pk.remove_prefix(sk.size());
             db_->Get(ReadOptions(), pk, &val);
             vals->push_back(val);
-            if(read_count >= opt_.index_threshold) {
-                wb.Put(index_, it->key(), val);
-            }
+            val_count ++;
+            wb.Put(index_, it->key(), val);
         }
-        if(read_count >= opt_.index_threshold) {
+        if(read_count * val_count > opt_.index_threshold) {
+            //cout << format("create duplication for {}", sk.ToString()) << endl; 
+            stat_.sec_index_count ++;
+            stat_.sec_item_count += wb.Count();
             wb.Put(index_, sk, "");
             db_->Write(WriteOptions(), &wb);
         }
     }
     return it->status();
+}
+
+PiStat Pi::stat() const{
+    return stat_;
 }
 
 
